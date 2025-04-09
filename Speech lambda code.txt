@@ -1,0 +1,37 @@
+Speech to text conversion
+
+Lambda Code (Python 3.9)
+
+import json
+import boto3
+import time
+
+s3_client = boto3.client('s3')
+transcribe = boto3.client('transcribe')
+
+DESTINATION_BUCKET = "speech-to-text-output386"
+
+def lambda_handler(event, context):
+
+    source_bucket = event['Records'][0]['s3']['bucket']['name']
+    key = event['Records'][0]['s3']['object']['key']
+
+    transcribe_job_name = f"transcription-{int(time.time())}"
+    print(transcribe_job_name)
+
+    file_uri = f"s3://{source_bucket}/{key}"
+    print(file_uri)
+
+    response = transcribe.start_transcription_job(
+        TranscriptionJobName=transcribe_job_name,
+        Media={'MediaFileUri': file_uri},
+        MediaFormat=key.split('.')[-1],
+        LanguageCode='en-US',
+        OutputBucketName=DESTINATION_BUCKET,
+        OutputKey=f"transcribe/{key.split('.')[0]}.json"
+    )
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps(f"Transcription job {transcribe_job_name} started. Transcripts will be saved to {DESTINATION_BUCKET}")
+    }
